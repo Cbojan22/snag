@@ -5,6 +5,7 @@ import os
 import sys
 import logging
 import tempfile
+import argparse
 from src.app import SnagApp
 
 
@@ -48,25 +49,56 @@ def acquire_lock():
 
 
 def setup_logging() -> None:
-    """Configure application logging."""
+    """Configure logging for the application."""
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
 
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Snag — Media Downloader")
+    parser.add_argument(
+        "--server",
+        action="store_true",
+        help="Start HTTP server instead of GUI (runs in background)"
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host for HTTP server (default: 127.0.0.1)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        help="Port for HTTP server (default: 8080)"
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
-    """Launch the Snag application."""
-    lock = acquire_lock()
-    ensure_path()
+    """Application entry point."""
+    args = parse_args()
     setup_logging()
     logger = logging.getLogger(__name__)
-    logger.info("Starting Snag...")
-
+    
+    ensure_path()
+    lock = acquire_lock()
+    
     try:
-        app = SnagApp()
-        app.run()
+        if args.server:
+            # Start HTTP server mode
+            from src.server import SnagServer
+            logger.info(f"Starting Snag HTTP server on {args.host}:{args.port}")
+            server = SnagServer(host=args.host, port=args.port)
+            server.start(daemon=False)  # Run in foreground
+        else:
+            # Start GUI mode
+            app = SnagApp()
+            app.run()
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         sys.exit(0)
