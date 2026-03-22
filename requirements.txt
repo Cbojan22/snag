@@ -1,0 +1,22 @@
+# ============================================================
+# Media Downloader — Python Dependencies
+# ============================================================
+
+# --- Core Download Engines ---
+yt-dlp[default]>=2024.0.0       # Video downloader (YouTube, TikTok, 1000+ sites)
+gallery-dl>=1.27.0              # Image/gallery downloader (Imgur, Reddit, 100+ sites)
+
+# --- Media Processing ---
+Pillow>=10.0.0                  # Image processing (thumbnails, format conversion)
+
+# --- GUI Framework ---
+customtkinter>=5.2.0            # Modern-looking Tkinter wrapper
+
+# --- Utilities ---
+requests>=2.31.0                # HTTP requests for API calls & previews
+pyperclip>=1.8.0                # Cross-platform clipboard access
+validators>=0.22.0              # URL validation
+
+# --- Testing ---
+pytest>=7.4.0                   # Test framework
+pytest-asyncio>=0.21.0          # Async test support

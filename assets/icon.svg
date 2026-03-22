@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Concept 3: Claw Machine Grab — arcade claw "snagging" a play button -->
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e1e2e"/>
+      <stop offset="100%" stop-color="#181825"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="108" fill="url(#bg3)"/>
+  <!-- Cable -->
+  <line x1="256" y1="30" x2="256" y2="135" stroke="#6c7086" stroke-width="16" stroke-linecap="round"/>
+  <!-- Claw mechanism hub -->
+  <circle cx="256" cy="155" r="32" fill="#313244" stroke="#94e2d5" stroke-width="8"/>
+  <!-- Claw arms (3 prongs) -->
+  <path d="M 232 178 Q 180 245 148 305 Q 140 325 160 332"
+        fill="none" stroke="#94e2d5" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 256 183 Q 256 260 256 310 Q 256 335 256 340"
+        fill="none" stroke="#94e2d5" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 280 178 Q 332 245 364 305 Q 372 325 352 332"
+        fill="none" stroke="#94e2d5" stroke-width="18" stroke-linecap="round"/>
+  <!-- Grabbed play button -->
+  <rect x="160" y="332" width="192" height="140" rx="22" fill="#313244" stroke="#45475a" stroke-width="4"/>
+  <polygon points="228,360 228,440 300,400" fill="#f38ba8"/>
+  <!-- Sparkle effects -->
+  <circle cx="120" cy="180" r="6" fill="#f9e2af" opacity="0.7"/>
+  <circle cx="400" cy="155" r="5" fill="#f9e2af" opacity="0.5"/>
+  <circle cx="95" cy="390" r="5" fill="#94e2d5" opacity="0.4"/>
+  <circle cx="420" cy="370" r="6" fill="#cba6f7" opacity="0.5"/>
+</svg>
