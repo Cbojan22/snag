@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse, unquote
 
 from src.core.engine import (
     DownloadEngine,
@@ -99,10 +99,34 @@ class URLRouter:
 
     @staticmethod
     def clean_url(url: str) -> str:
-        """Clean and normalize a URL."""
+        """Clean and normalize a URL.
+
+        Unwraps wrapper URLs (Google Images, Google AMP, etc.)
+        to extract the actual media URL.
+        """
         url = url.strip()
-        # Remove tracking parameters commonly appended
-        # but keep the core URL intact
+
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+
+        # Google Images: extract actual image URL from imgurl param
+        if "google." in domain and parsed.path in ("/imgres", "/url"):
+            params = parse_qs(parsed.query)
+            if "imgurl" in params:
+                extracted = params["imgurl"][0]
+                logger.debug("Extracted image URL from Google: %s", extracted)
+                return extracted
+            if "url" in params:
+                extracted = params["url"][0]
+                logger.debug("Extracted URL from Google redirect: %s", extracted)
+                return extracted
+
+        # Google encrypted thumbnails — extract from the q parameter
+        if "encrypted-tbn" in domain and "gstatic.com" in domain:
+            params = parse_qs(parsed.query)
+            if "q" in params and params["q"][0].startswith("http"):
+                return params["q"][0]
+
         return url
 
     def detect_media_type(self, url: str) -> MediaType:
@@ -115,7 +139,7 @@ class URLRouter:
             Best-guess MediaType based on URL structure.
         """
         parsed = urlparse(url)
-        path = parsed.path.lower()
+        path = unquote(parsed.path).lower()
 
         # Check file extension
         for ext in IMAGE_EXTENSIONS:
@@ -168,11 +192,9 @@ class URLRouter:
                     return self._image_engine
                 return self._video_engine  # Default to video for tweets
 
-            # Instagram: reels are video, posts could be either
+            # Instagram: yt-dlp handles auth/login better than gallery-dl
             if "instagram.com" in domain:
-                if "/reel/" in path or "/tv/" in path:
-                    return self._video_engine
-                return self._image_engine  # Default to image for IG posts
+                return self._video_engine
 
             # Reddit: could be either
             if "reddit.com" in domain:
@@ -203,6 +225,7 @@ class URLRouter:
         Raises:
             ExtractionError: If all engines fail.
         """
+        url = self.clean_url(url)
         engine = self.select_engine(url)
         logger.info(f"Using {engine.name} to extract info from {url}")
 
@@ -233,6 +256,7 @@ class URLRouter:
         Returns:
             DownloadResult from whichever engine succeeds.
         """
+        url = self.clean_url(url)
         engine = self.select_engine(url)
         logger.info(f"Using {engine.name} to download {url}")
 
