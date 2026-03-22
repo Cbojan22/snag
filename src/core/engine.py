@@ -111,6 +111,7 @@ class DownloadOptions:
     filename_template: str = "%(title)s.%(ext)s"
     prefer_mp4: bool = True
     max_quality: bool = True  # Always highest quality
+    audio_only: bool = False  # Extract audio as MP3
     skip_existing: bool = True
     write_thumbnail: bool = False
     embed_metadata: bool = True

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -64,6 +65,22 @@ SOCIAL_IMAGE_DOMAINS = {
     "reddit.com", "www.reddit.com", "i.redd.it",
     "nitter.net",
 }
+
+
+def _is_twitter_url(url: str) -> bool:
+    """Check if URL is a Twitter/X tweet."""
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        return ("twitter.com" in domain or "x.com" in domain) and "/status/" in parsed.path
+    except Exception:
+        return False
+
+
+def _extract_tweet_id(url: str) -> Optional[str]:
+    """Extract tweet ID from a Twitter/X URL."""
+    match = re.search(r'/status/(\d+)', url)
+    return match.group(1) if match else None
 
 
 def _is_image_url(url: str) -> bool:
@@ -270,12 +287,125 @@ class ImageDownloader(DownloadEngine):
         if result.success:
             return result
 
+        # Twitter/X fallback: use syndication API when gallery-dl fails
+        if _is_twitter_url(url):
+            logger.info("gallery-dl failed, trying Twitter syndication API for %s", url)
+            twitter_result = self._download_twitter_images(url, opts, output_dir)
+            if twitter_result.success:
+                return twitter_result
+
         # Fall back to direct HTTP download for image URLs
         if _is_image_url(url):
             logger.info("gallery-dl failed, trying direct HTTP download for %s", url)
             return self._download_direct(url, opts, output_dir)
 
         return result
+
+    def _download_twitter_images(
+        self, url: str, opts: DownloadOptions, output_dir: Path
+    ) -> DownloadResult:
+        """Download images from a Twitter/X tweet via the fxtwitter API.
+
+        This is a fallback for when gallery-dl's Twitter extractor is broken,
+        which happens periodically as Twitter changes their API.
+        """
+        tweet_id = _extract_tweet_id(url)
+        if not tweet_id:
+            return DownloadResult(success=False, error="Could not extract tweet ID")
+
+        try:
+            # Use fxtwitter API — reliably returns JSON with media URLs
+            match = re.search(r'(?:twitter\.com|x\.com)/(\w+)/status/', url)
+            user = match.group(1) if match else "i"
+            api_url = f"https://api.fxtwitter.com/{user}/status/{tweet_id}"
+            resp = requests.get(api_url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+
+            if resp.status_code != 200:
+                return DownloadResult(
+                    success=False,
+                    error=f"Tweet not found or unavailable (HTTP {resp.status_code})"
+                )
+
+            data = resp.json()
+            tweet = data.get("tweet")
+            if not tweet:
+                return DownloadResult(success=False, error="No tweet data returned")
+
+            # Collect image URLs from fxtwitter media structure
+            image_urls: list[str] = []
+            media = tweet.get("media", {})
+
+            for item in media.get("all", []):
+                if item.get("type") == "photo":
+                    photo_url = item.get("url", "")
+                    if photo_url:
+                        # Request highest quality
+                        if "twimg.com" in photo_url:
+                            photo_url = re.sub(r'\?.*$', '', photo_url)
+                            photo_url += "?format=jpg&name=4096x4096"
+                        image_urls.append(photo_url)
+
+            # Also check photos list
+            for photo in media.get("photos", []):
+                photo_url = photo.get("url", "")
+                if photo_url and photo_url not in image_urls:
+                    if "twimg.com" in photo_url:
+                        photo_url = re.sub(r'\?.*$', '', photo_url)
+                        photo_url += "?format=jpg&name=4096x4096"
+                    image_urls.append(photo_url)
+
+            if not image_urls:
+                return DownloadResult(success=False, error="No images found in tweet")
+
+            # Download each image
+            downloaded_files: list[Path] = []
+            tweet_text = tweet.get("text", "tweet")[:50].strip()
+            # Sanitize for filename
+            safe_text = re.sub(r'[^\w -]', '', tweet_text.replace('\n', ' ')).strip()[:40] or "tweet"
+
+            for i, img_url in enumerate(image_urls):
+                suffix = f"_{i+1}" if len(image_urls) > 1 else ""
+                filename = f"{safe_text}{suffix}.jpg"
+                filepath = output_dir / filename
+
+                img_resp = requests.get(
+                    img_url, timeout=30, stream=True,
+                    headers={"User-Agent": "Mozilla/5.0"},
+                )
+                img_resp.raise_for_status()
+
+                with open(filepath, "wb") as f:
+                    for chunk in img_resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
+                downloaded_files.append(filepath)
+                logger.info("Downloaded Twitter image: %s", filepath)
+
+            if opts.progress_callback:
+                opts.progress_callback(DownloadProgress(
+                    status=DownloadStatus.COMPLETED,
+                    percent=100.0,
+                    message=f"Downloaded {len(downloaded_files)} image(s) from tweet",
+                ))
+
+            first = downloaded_files[0]
+            media_type = MediaType.GALLERY if len(downloaded_files) > 1 else MediaType.IMAGE
+            return DownloadResult(
+                success=True,
+                filepath=first,
+                media_info=MediaInfo(
+                    url=url,
+                    title=safe_text,
+                    media_type=media_type,
+                    ext="jpg",
+                    source_site="twitter",
+                ),
+                files_downloaded=downloaded_files,
+            )
+
+        except Exception as e:
+            logger.error("Twitter fxtwitter download failed for %s: %s", url, e)
+            return DownloadResult(success=False, error=str(e))
 
     def _download_gallery_dl(
         self, url: str, opts: DownloadOptions, output_dir: Path

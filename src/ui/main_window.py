@@ -223,7 +223,8 @@ class MainWindow:
 
         options = DownloadOptions(
             output_dir=output_dir,
-            prefer_mp4=self._settings.get_prefer_mp4(),
+            prefer_mp4=True,
+            audio_only=self._settings.get_audio_only(),
             progress_callback=lambda p: self._root.after(
                 0, self._on_progress, download_id, p
             ),

@@ -132,14 +132,14 @@ class SettingsPanel(ctk.CTkFrame):
             row=1, column=0, columnspan=3, padx=PAD_MD, pady=(PAD_SM, PAD_XS), sticky="w"
         )
 
-        # --- Prefer MP4 toggle ---
-        self._mp4_var = ctk.BooleanVar(value=True)
-        self._mp4_toggle = ctk.CTkSwitch(
+        # --- Download as MP3 toggle ---
+        self._audio_only_var = ctk.BooleanVar(value=False)
+        self._audio_toggle = ctk.CTkSwitch(
             self._content,
-            text="Prefer MP4 format for videos",
+            text="Download as MP3 (extract audio from videos)",
             font=FONT_SMALL,
             text_color=COLOR_TEXT_DIM,
-            variable=self._mp4_var,
+            variable=self._audio_only_var,
             onvalue=True,
             offvalue=False,
             command=self._on_setting_changed,
@@ -147,7 +147,7 @@ class SettingsPanel(ctk.CTkFrame):
             button_color=COLOR_TEXT_SECONDARY,
             button_hover_color=COLOR_TEXT,
         )
-        self._mp4_toggle.grid(
+        self._audio_toggle.grid(
             row=2, column=0, columnspan=3, padx=PAD_MD, pady=(PAD_XS, PAD_MD), sticky="w"
         )
 
@@ -186,6 +186,6 @@ class SettingsPanel(ctk.CTkFrame):
         """Whether clipboard monitoring is enabled."""
         return self._clipboard_var.get()
 
-    def get_prefer_mp4(self) -> bool:
-        """Whether to prefer MP4 output."""
-        return self._mp4_var.get()
+    def get_audio_only(self) -> bool:
+        """Whether to download audio only as MP3."""
+        return self._audio_only_var.get()

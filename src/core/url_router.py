@@ -257,6 +257,22 @@ class URLRouter:
             DownloadResult from whichever engine succeeds.
         """
         url = self.clean_url(url)
+        opts = options or DownloadOptions()
+
+        if opts.audio_only:
+            # Audio-only mode: only yt-dlp can extract audio
+            engine = self._video_engine
+            logger.info(f"Using {engine.name} (audio-only) to download {url}")
+            result = engine.download(url, options)
+            if not result.success:
+                # Improve error message for non-audio URLs
+                error = result.error or ""
+                if "No video could be found" in error:
+                    result.error = "No audio or video found — this may be an image-only post"
+                elif "403" in error or "Forbidden" in error:
+                    result.error = "No audio available at this URL"
+            return result
+
         engine = self.select_engine(url)
         logger.info(f"Using {engine.name} to download {url}")
 
