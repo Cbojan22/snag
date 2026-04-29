@@ -22,6 +22,7 @@ from src.ui.styles import (
     CORNER_RADIUS_SM,
     FONT_BODY,
     FONT_MONO_SM,
+    FONT_MONO_TAG,
     FONT_SMALL,
     FONT_TINY,
     PAD_MD,
@@ -46,8 +47,7 @@ class SettingsPanel(ctk.CTkFrame):
             master,
             fg_color=COLOR_BG_CARD,
             corner_radius=CORNER_RADIUS,
-            border_width=1,
-            border_color=COLOR_BORDER,
+            border_width=0,
             **kwargs,
         )
         self._on_changed = on_settings_changed
@@ -60,13 +60,13 @@ class SettingsPanel(ctk.CTkFrame):
         # Toggle header — minimal
         self._toggle_btn = ctk.CTkButton(
             self,
-            text="\u2699  Settings",
-            font=FONT_SMALL,
+            text="\u2699   SETTINGS",
+            font=FONT_MONO_TAG,
             fg_color="transparent",
             hover_color=COLOR_BG_ELEVATED,
-            text_color=COLOR_TEXT_MUTED,
+            text_color=COLOR_TEXT_DIM,
             anchor="w",
-            height=36,
+            height=38,
             command=self._toggle,
         )
         self._toggle_btn.grid(row=0, column=0, padx=PAD_SM, pady=PAD_XS, sticky="ew")
@@ -155,10 +155,10 @@ class SettingsPanel(ctk.CTkFrame):
         """Expand or collapse settings."""
         self._expanded = not self._expanded
         if self._expanded:
-            self._toggle_btn.configure(text="\u2699  Settings  \u25B4")
+            self._toggle_btn.configure(text="\u2699   SETTINGS   \u25B4")
             self._content.grid(row=1, column=0, padx=0, pady=(0, PAD_SM), sticky="ew")
         else:
-            self._toggle_btn.configure(text="\u2699  Settings")
+            self._toggle_btn.configure(text="\u2699   SETTINGS")
             self._content.grid_remove()
 
     def _browse_dir(self) -> None:

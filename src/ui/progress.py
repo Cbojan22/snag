@@ -16,6 +16,7 @@ from src.ui.styles import (
     COLOR_BORDER_SUBTLE,
     COLOR_ERROR,
     COLOR_ERROR_DIM,
+    COLOR_HIGHLIGHT,
     COLOR_SUCCESS,
     COLOR_SUCCESS_DIM,
     COLOR_TEXT,
@@ -25,7 +26,9 @@ from src.ui.styles import (
     CORNER_RADIUS,
     CORNER_RADIUS_SM,
     FONT_BODY,
+    FONT_BODY_BOLD,
     FONT_MONO_SM,
+    FONT_MONO_TAG,
     FONT_SMALL,
     FONT_TINY,
     PAD_MD,
@@ -51,8 +54,7 @@ class DownloadProgressCard(ctk.CTkFrame):
             master,
             fg_color=COLOR_BG_CARD,
             corner_radius=CORNER_RADIUS,
-            border_width=1,
-            border_color=COLOR_BORDER,
+            border_width=0,
             **kwargs,
         )
         self._title = title
@@ -65,8 +67,8 @@ class DownloadProgressCard(ctk.CTkFrame):
         self._title_label = ctk.CTkLabel(
             self,
             text=self._title,
-            font=FONT_SMALL,
-            text_color=COLOR_TEXT_SECONDARY,
+            font=FONT_BODY,
+            text_color=COLOR_TEXT,
             anchor="w",
         )
         self._title_label.grid(
@@ -77,7 +79,7 @@ class DownloadProgressCard(ctk.CTkFrame):
         self._status_label = ctk.CTkLabel(
             self,
             text="PENDING",
-            font=FONT_MONO_SM,
+            font=FONT_MONO_TAG,
             text_color=COLOR_TEXT_MUTED,
             anchor="e",
         )
@@ -145,14 +147,10 @@ class DownloadProgressCard(ctk.CTkFrame):
         if status == DownloadStatus.COMPLETED:
             self._progress_bar.configure(progress_color=COLOR_SUCCESS)
             self._progress_bar.set(1.0)
-            self.configure(border_color=COLOR_SUCCESS_DIM)
         elif status == DownloadStatus.FAILED:
             self._progress_bar.configure(progress_color=COLOR_ERROR)
-            self.configure(border_color=COLOR_ERROR_DIM)
         elif status == DownloadStatus.DOWNLOADING:
-            self.configure(border_color=COLOR_ACCENT_DIM)
-        else:
-            self.configure(border_color=COLOR_BORDER)
+            self._progress_bar.configure(progress_color=COLOR_ACCENT)
 
     def set_title(self, title: str) -> None:
         """Update the title."""
@@ -176,7 +174,7 @@ class ProgressPanel(ctk.CTkScrollableFrame):
         # Empty state label
         self._empty_label = ctk.CTkLabel(
             self,
-            text="No downloads yet\nPaste a URL above to get started",
+            text="nothing snagged yet\npaste a URL above to begin",
             font=FONT_SMALL,
             text_color=COLOR_TEXT_MUTED,
             justify="center",

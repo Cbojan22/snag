@@ -14,6 +14,7 @@ from src.ui.styles import (
     COLOR_BG_ELEVATED,
     COLOR_BG_INPUT,
     COLOR_BORDER,
+    COLOR_HIGHLIGHT,
     COLOR_TEXT,
     COLOR_TEXT_DIM,
     COLOR_TEXT_MUTED,
@@ -22,6 +23,7 @@ from src.ui.styles import (
     CORNER_RADIUS_SM,
     FONT_BODY,
     FONT_MONO_SM,
+    FONT_MONO_TAG,
     FONT_SMALL,
     FONT_SUBHEADING,
     FONT_TINY,
@@ -44,8 +46,7 @@ class PreviewPanel(ctk.CTkFrame):
             master,
             fg_color=COLOR_BG_CARD,
             corner_radius=CORNER_RADIUS,
-            border_width=1,
-            border_color=COLOR_BORDER,
+            border_width=0,
             **kwargs,
         )
         self._thumb_image: Optional[ctk.CTkImage] = None
@@ -63,7 +64,7 @@ class PreviewPanel(ctk.CTkFrame):
         self._platform_label = ctk.CTkLabel(
             self._banner,
             text="",
-            font=FONT_MONO_SM,
+            font=FONT_MONO_TAG,
             text_color=COLOR_ACCENT,
             anchor="w",
         )

@@ -11,8 +11,6 @@ from src.ui.styles import (
     COLOR_BG_CARD,
     COLOR_BG_ELEVATED,
     COLOR_BG_INPUT,
-    COLOR_BORDER,
-    COLOR_BORDER_SUBTLE,
     COLOR_TEXT,
     COLOR_TEXT_DIM,
     CORNER_RADIUS,
@@ -43,8 +41,7 @@ class URLInputBar(ctk.CTkFrame):
             master,
             fg_color=COLOR_BG_CARD,
             corner_radius=CORNER_RADIUS,
-            border_width=1,
-            border_color=COLOR_BORDER,
+            border_width=0,
             **kwargs,
         )
         self._on_submit = on_submit
@@ -59,8 +56,8 @@ class URLInputBar(ctk.CTkFrame):
         # Paste button — ghost style
         self._paste_btn = ctk.CTkButton(
             self,
-            text="\u2398  Paste",
-            width=80,
+            text="\u2398   PASTE",
+            width=88,
             height=INPUT_HEIGHT,
             font=FONT_MONO_SM,
             fg_color="transparent",
@@ -78,10 +75,9 @@ class URLInputBar(ctk.CTkFrame):
             height=INPUT_HEIGHT,
             font=FONT_BODY,
             fg_color=COLOR_BG_INPUT,
-            border_width=1,
-            border_color=COLOR_BORDER_SUBTLE,
+            border_width=0,
             text_color=COLOR_TEXT,
-            placeholder_text="Paste any URL \u2014 video, image, gallery...",
+            placeholder_text="paste any URL \u2014 video, image, gallery, anything...",
             placeholder_text_color=COLOR_TEXT_DIM,
             corner_radius=CORNER_RADIUS_SM,
         )
@@ -93,13 +89,13 @@ class URLInputBar(ctk.CTkFrame):
         # Download button — teal accent, black text
         self._dl_btn = ctk.CTkButton(
             self,
-            text="\u25BC  Download",
+            text="\u2193   SNAG",
             width=130,
             height=INPUT_HEIGHT,
             font=FONT_BUTTON,
             fg_color=COLOR_ACCENT,
             hover_color=COLOR_ACCENT_HOVER,
-            text_color="#000000",
+            text_color="#0B0C12",
             corner_radius=CORNER_RADIUS_SM,
             command=self._submit,
         )

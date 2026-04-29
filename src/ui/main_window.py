@@ -25,13 +25,19 @@ from src.ui.settings import SettingsPanel
 from src.ui.styles import (
     COLOR_ACCENT,
     COLOR_BG,
+    COLOR_HIGHLIGHT,
+    COLOR_TEXT,
+    COLOR_TEXT_DIM,
     COLOR_TEXT_MUTED,
     FONT_LOGO,
+    FONT_LOGO_GLYPH,
     FONT_MONO_SM,
+    FONT_MONO_TAG,
     FONT_SMALL,
     PAD_LG,
     PAD_MD,
     PAD_SM,
+    PAD_XS,
     PAD_XL,
     PAD_2XL,
     WINDOW_DEFAULT_SIZE,
@@ -80,23 +86,56 @@ class MainWindow:
         header_frame.grid(row=0, column=0, padx=PAD_XL, pady=(PAD_2XL, 0), sticky="ew")
         header_frame.grid_columnconfigure(0, weight=1)
 
-        title = ctk.CTkLabel(
+        # Build pill above the wordmark
+        version_pill = ctk.CTkLabel(
             header_frame,
-            text="SNAG",
-            font=FONT_LOGO,
-            text_color=COLOR_ACCENT,
+            text="v0.2  \u2022  MEDIA RIPPER",
+            font=FONT_MONO_TAG,
+            text_color=COLOR_HIGHLIGHT,
             anchor="w",
         )
-        title.grid(row=0, column=0, sticky="w")
+        version_pill.grid(row=0, column=0, sticky="w", pady=(0, PAD_SM))
+
+        # Wordmark row \u2014 lime caret + Futura bold "snag"
+        logo_row = ctk.CTkFrame(header_frame, fg_color="transparent")
+        logo_row.grid(row=1, column=0, sticky="w")
+
+        caret = ctk.CTkLabel(
+            logo_row,
+            text="\u25b8",  # right-pointing solid triangle as a play/snag mark
+            font=FONT_LOGO_GLYPH,
+            text_color=COLOR_ACCENT,
+        )
+        caret.grid(row=0, column=0, padx=(0, PAD_SM), sticky="sw", pady=(0, 18))
+
+        wordmark = ctk.CTkLabel(
+            logo_row,
+            text="snag",
+            font=FONT_LOGO,
+            text_color=COLOR_TEXT,
+            anchor="w",
+        )
+        wordmark.grid(row=0, column=1, sticky="w")
+
+        # Lime accent underline anchors the wordmark
+        accent_bar = ctk.CTkFrame(
+            header_frame,
+            fg_color=COLOR_ACCENT,
+            height=3,
+            corner_radius=2,
+            width=64,
+        )
+        accent_bar.grid(row=2, column=0, sticky="w", pady=(0, PAD_SM))
+        accent_bar.grid_propagate(False)
 
         subtitle = ctk.CTkLabel(
             header_frame,
-            text="Snag any media from the web \u2014 highest quality, no watermarks",
+            text="grab any media from the web \u2014 highest quality, no watermarks",
             font=FONT_SMALL,
-            text_color=COLOR_TEXT_MUTED,
+            text_color=COLOR_TEXT_DIM,
             anchor="w",
         )
-        subtitle.grid(row=1, column=0, pady=(PAD_SM, 0), sticky="w")
+        subtitle.grid(row=3, column=0, pady=(PAD_SM, 0), sticky="w")
 
         # ── URL Input ─────────────────────────────────────────────
         self._url_input = URLInputBar(
@@ -114,17 +153,27 @@ class MainWindow:
             row=3, column=0, padx=PAD_XL, pady=(0, PAD_MD), sticky="ew"
         )
 
-        # ── Downloads section ─────────────────────────────────────
-        downloads_header = ctk.CTkLabel(
-            self._root,
-            text="DOWNLOADS",
+        # ── Downloads section header ──────────────────────────────
+        dl_header_row = ctk.CTkFrame(self._root, fg_color="transparent")
+        dl_header_row.grid(row=4, column=0, padx=PAD_XL, pady=(PAD_MD, PAD_XS), sticky="ew")
+        dl_header_row.grid_columnconfigure(1, weight=1)
+
+        dl_dot = ctk.CTkLabel(
+            dl_header_row,
+            text="●",
             font=FONT_MONO_SM,
-            text_color=COLOR_TEXT_MUTED,
+            text_color=COLOR_ACCENT,
+        )
+        dl_dot.grid(row=0, column=0, padx=(2, PAD_SM), sticky="w")
+
+        downloads_header = ctk.CTkLabel(
+            dl_header_row,
+            text="DOWNLOADS",
+            font=FONT_MONO_TAG,
+            text_color=COLOR_TEXT_DIM,
             anchor="w",
         )
-        downloads_header.grid(
-            row=4, column=0, padx=(PAD_XL + 2), pady=(PAD_SM, 0), sticky="nw"
-        )
+        downloads_header.grid(row=0, column=1, sticky="w")
 
         # Progress panel (scrollable, fills remaining space)
         self._progress = ProgressPanel(self._root)

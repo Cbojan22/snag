@@ -106,7 +106,7 @@ ProgressCallback = Callable[[DownloadProgress], None]
 @dataclass
 class DownloadOptions:
     """Options for a download operation."""
-    output_dir: Path = field(default_factory=lambda: Path.home() / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "Snag")
+    output_dir: Path = field(default_factory=lambda: Path.home() / "Downloads" / "Snag")
     filename_template: str = "%(title)s.%(ext)s"
     prefer_mp4: bool = True
     max_quality: bool = True  # Always highest quality
