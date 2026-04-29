@@ -13,8 +13,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Default download directory
-DEFAULT_DOWNLOAD_DIR = Path.home() / "Downloads" / "Snag"
+# Default download directory - iCloud Drive for iPhone sync
+DEFAULT_DOWNLOAD_DIR = Path.home() / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "Snag"
 
 
 def ensure_download_dir(path: Path | None = None) -> Path:

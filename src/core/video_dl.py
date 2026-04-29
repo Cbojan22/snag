@@ -11,6 +11,7 @@ import logging
 import re
 import shutil
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -31,6 +32,13 @@ from src.core.engine import (
 from src.core.watermark import get_watermark_free_opts
 
 logger = logging.getLogger(__name__)
+
+# YouTube player clients that bypass the "Sign in to confirm you're not a bot"
+# challenge without needing cookies. The default `web` client is the most
+# aggressively challenged; `tv` (the TV embed client) and `web_safari` rarely
+# trigger it. `ios` is a backup that sometimes carries unique formats.
+_YOUTUBE_PLAYER_CLIENTS = ["tv", "web_safari", "ios"]
+_YOUTUBE_HOST_PARTS = ("youtube.com", "youtu.be", "youtube-nocookie.com")
 
 
 class VideoDownloader(DownloadEngine):
@@ -55,7 +63,98 @@ class VideoDownloader(DownloadEngine):
         except Exception:
             return False
 
-    def _build_opts(self, url: str, options: Optional[DownloadOptions] = None) -> dict:
+    @staticmethod
+    def _browser_cookie_candidates() -> list[tuple]:
+        """Return yt-dlp cookiesfrombrowser tuples for browsers installed on this Mac.
+
+        Ordered by least-likely-to-prompt-the-user first: Firefox stores cookies
+        unencrypted, Chromium-family browsers require keychain access, Safari is
+        most restricted by SIP.
+        """
+        home = Path.home()
+        browsers: list[tuple[str, Path]] = [
+            ("firefox", home / "Library" / "Application Support" / "Firefox"),
+            ("brave", home / "Library" / "Application Support" / "BraveSoftware" / "Brave-Browser"),
+            ("chrome", home / "Library" / "Application Support" / "Google" / "Chrome"),
+            ("edge", home / "Library" / "Application Support" / "Microsoft Edge"),
+            ("safari", home / "Library" / "Cookies"),
+        ]
+        return [(name,) for name, path in browsers if path.exists()]
+
+    @staticmethod
+    def _is_youtube_url(url: str) -> bool:
+        """Check if URL points to YouTube (any host variant)."""
+        domain = urlparse(url).netloc.lower()
+        return any(part in domain for part in _YOUTUBE_HOST_PARTS)
+
+    @staticmethod
+    def _cookies_cache_dir() -> Path:
+        """Persistent location for cached cookies.
+
+        Stored under Application Support so OS sandboxing (and the bundled
+        `.app` distribution) can write to it without user intervention.
+        """
+        return Path.home() / "Library" / "Application Support" / "Snag" / "cookies"
+
+    @classmethod
+    def _youtube_cookies_cache(cls) -> Path:
+        """Cached YouTube cookies in Netscape format.
+
+        Once a browser-cookie download succeeds we persist the cookiejar here
+        so subsequent runs skip the keychain prompt and re-extraction.
+        """
+        return cls._cookies_cache_dir() / "youtube.txt"
+
+    @classmethod
+    def _save_cookies_to_cache(cls, ydl: "yt_dlp.YoutubeDL", path: Path) -> None:
+        """Persist a YoutubeDL session's cookiejar to a Netscape cookies.txt file."""
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            ydl.cookiejar.save(str(path), ignore_discard=True, ignore_expires=True)
+            logger.info("Cached cookies to %s", path)
+        except Exception as e:
+            logger.warning("Failed to cache cookies to %s: %s", path, e)
+
+    @staticmethod
+    def _is_bot_detection_error(error: str) -> bool:
+        """Detect YouTube/etc. bot-challenge errors that cookies can resolve."""
+        error_lower = error.lower()
+        return any(
+            phrase in error_lower
+            for phrase in (
+                "sign in to confirm",
+                "confirm you're not a bot",
+                "confirm you’re not a bot",
+                "use --cookies",
+                "http error 403",
+            )
+        )
+
+    @staticmethod
+    def _is_cookie_extraction_error(error: str) -> bool:
+        """Detect failures while reading a browser's cookie store — try the next browser."""
+        error_lower = error.lower()
+        if any(
+            phrase in error_lower
+            for phrase in (
+                "could not find",  # "could not find <browser> cookies database"
+                "failed to decrypt",
+                "permission denied",
+                "no such file",
+            )
+        ) and "cookie" in error_lower:
+            return True
+        # Safari path is hard-coded by yt-dlp; SIP blocks reads without Full Disk Access
+        return "cookies.binarycookies" in error_lower or (
+            "operation not permitted" in error_lower and "cookies" in error_lower
+        )
+
+    def _build_opts(
+        self,
+        url: str,
+        options: Optional[DownloadOptions] = None,
+        cookies_from_browser: Optional[tuple] = None,
+    ) -> dict:
         """Build yt-dlp options dict from DownloadOptions."""
         opts = options or DownloadOptions()
         output_dir = opts.output_dir
@@ -99,6 +198,10 @@ class VideoDownloader(DownloadEngine):
             # Metadata
             "writethumbnail": opts.write_thumbnail,
             "postprocessors": postprocessors,
+            # Allow yt-dlp to fetch its EJS challenge solver from GitHub on demand.
+            # Required for YouTube's "n challenge" obfuscation when no local
+            # JS runtime (deno/node) is installed.
+            "remote_components": {"ejs:github"},
             # Logging
             "quiet": False,
             "no_color": True,
@@ -115,9 +218,11 @@ class VideoDownloader(DownloadEngine):
                 "key": "FFmpegMetadata",
             })
 
-        # Cookie file for authenticated downloads
+        # Cookie file for authenticated downloads (explicit user setting wins)
         if opts.cookies_file and opts.cookies_file.exists():
             ydl_opts["cookiefile"] = str(opts.cookies_file)
+        elif cookies_from_browser:
+            ydl_opts["cookiesfrombrowser"] = cookies_from_browser
 
         # Progress hook
         if opts.progress_callback:
@@ -128,6 +233,16 @@ class VideoDownloader(DownloadEngine):
         # Merge platform-specific watermark-free options
         wm_opts = get_watermark_free_opts(url)
         ydl_opts.update(wm_opts)
+
+        # YouTube: switch to player clients that don't trigger bot challenges.
+        # Skip when the user supplied real cookies — the default `web` client
+        # works fine when authenticated and exposes the full format ladder.
+        if self._is_youtube_url(url) and not (
+            ydl_opts.get("cookiefile") or ydl_opts.get("cookiesfrombrowser")
+        ):
+            extractor_args = dict(ydl_opts.get("extractor_args") or {})
+            extractor_args["youtube"] = {"player_client": list(_YOUTUBE_PLAYER_CLIENTS)}
+            ydl_opts["extractor_args"] = extractor_args
 
         return ydl_opts
 
@@ -360,18 +475,20 @@ class VideoDownloader(DownloadEngine):
             logger.error("Twitter video fallback failed for %s: %s", url, e)
             return None
 
-    def download(self, url: str, options: Optional[DownloadOptions] = None) -> DownloadResult:
-        """Download video from URL at highest quality.
+    def _attempt_yt_dlp(
+        self,
+        url: str,
+        opts: DownloadOptions,
+        cookies_from_browser: Optional[tuple] = None,
+        save_cookies_to: Optional[Path] = None,
+    ) -> DownloadResult:
+        """Run a single yt-dlp download attempt, optionally using browser cookies.
 
-        Args:
-            url: Video URL to download.
-            options: Download configuration.
-
-        Returns:
-            DownloadResult with success status and file path.
+        If ``save_cookies_to`` is provided, the yt-dlp cookiejar is written
+        to that path on success — used to persist YouTube auth cookies after
+        a working browser is found, so future runs skip the keychain prompt.
         """
-        opts = options or DownloadOptions()
-        ydl_opts = self._build_opts(url, opts)
+        ydl_opts = self._build_opts(url, opts, cookies_from_browser=cookies_from_browser)
         downloaded_files: list[Path] = []
 
         try:
@@ -381,14 +498,14 @@ class VideoDownloader(DownloadEngine):
                 if not info:
                     return DownloadResult(success=False, error=f"No info returned for {url}")
 
-                # Find the downloaded file (must be inside `with` block)
+                if save_cookies_to is not None:
+                    self._save_cookies_to_cache(ydl, save_cookies_to)
+
                 filename = ydl.prepare_filename(info)
 
             filepath = Path(filename)
 
-            # yt-dlp may change the extension after post-processing
             if not filepath.exists():
-                # Try common extensions after conversion
                 for try_ext in (".mp4", ".mp3", ".webm", ".mkv"):
                     alt = filepath.with_suffix(try_ext)
                     if alt.exists():
@@ -417,17 +534,94 @@ class VideoDownloader(DownloadEngine):
             )
 
         except Exception as e:
-            logger.error(f"yt-dlp failed for {url}: {e}")
+            return DownloadResult(
+                success=False,
+                error=str(e),
+                files_downloaded=downloaded_files,
+            )
 
-            # Twitter/X fallback: use vxtwitter API when yt-dlp's extractor is broken
+    def download(self, url: str, options: Optional[DownloadOptions] = None) -> DownloadResult:
+        """Download video from URL at highest quality.
+
+        Args:
+            url: Video URL to download.
+            options: Download configuration.
+
+        Returns:
+            DownloadResult with success status and file path.
+        """
+        opts = options or DownloadOptions()
+        is_youtube = self._is_youtube_url(url)
+        cookie_cache = self._youtube_cookies_cache() if is_youtube else None
+
+        # YouTube: prefer cached cookies from a prior successful download — this
+        # is the permanent fix for the "Sign in to confirm you're not a bot"
+        # challenge. After the first browser-cookie success we persist them here,
+        # so future downloads skip the bot challenge and the keychain prompt.
+        first_attempt_opts = opts
+        used_cache = False
+        if (
+            is_youtube
+            and cookie_cache
+            and cookie_cache.exists()
+            and not opts.cookies_file
+        ):
+            first_attempt_opts = replace(opts, cookies_file=cookie_cache)
+            used_cache = True
+
+        result = self._attempt_yt_dlp(url, first_attempt_opts)
+
+        # Cached cookies expired or got rejected — wipe the stale file and let
+        # the bot-detection retry path below find a working browser.
+        if used_cache and not result.success and result.error and self._is_bot_detection_error(result.error):
+            logger.info("Cached YouTube cookies rejected — clearing cache and re-extracting from browsers")
+            try:
+                cookie_cache.unlink(missing_ok=True)
+            except Exception as e:
+                logger.warning("Failed to remove stale cookie cache: %s", e)
+
+        # Retry with browser cookies if YouTube (or similar) flagged us as a bot
+        if not result.success and result.error and self._is_bot_detection_error(result.error):
+            for browser in self._browser_cookie_candidates():
+                logger.info("Bot-detection challenge — retrying with %s cookies", browser[0])
+                retry = self._attempt_yt_dlp(
+                    url, opts,
+                    cookies_from_browser=browser,
+                    save_cookies_to=cookie_cache,
+                )
+                if retry.success:
+                    return retry
+                err = retry.error or ""
+                # Keep iterating if this browser couldn't supply cookies *or*
+                # if the site still rejected us — otherwise it's a real failure.
+                if not (self._is_bot_detection_error(err) or self._is_cookie_extraction_error(err)):
+                    result = retry
+                    break
+                result = retry
+
+        if not result.success:
+            logger.error(f"yt-dlp failed for {url}: {result.error}")
+
+            # Twitter/X fallback: use fxtwitter API when yt-dlp's extractor is broken
             if self._is_twitter_url(url):
                 logger.info("Trying Twitter video fallback for %s", url)
                 twitter_result = self._download_twitter_video(url, opts)
                 if twitter_result:
                     return twitter_result
 
-            return DownloadResult(
-                success=False,
-                error=str(e),
-                files_downloaded=downloaded_files,
-            )
+            # If we exhausted browser cookies on a bot challenge, give the user
+            # a clearer next step than yt-dlp's raw error.
+            err = result.error or ""
+            if self._is_bot_detection_error(err) or self._is_cookie_extraction_error(err):
+                result = DownloadResult(
+                    success=False,
+                    error=(
+                        "YouTube blocked the download as a bot. Tried browser cookies "
+                        "but none were readable. Open Chrome (or Brave/Firefox), sign in "
+                        "to YouTube, then retry. macOS may prompt for keychain access — "
+                        "click Always Allow."
+                    ),
+                    files_downloaded=result.files_downloaded,
+                )
+
+        return result

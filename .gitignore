@@ -41,3 +41,9 @@ downloads/
 
 # Claude Code
 .claude/
+.claude-flow/
+.mcp.json
+
+# Stray local artifacts
+*.dump
+wake_and_sync.sh

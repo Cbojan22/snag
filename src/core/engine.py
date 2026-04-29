@@ -100,14 +100,13 @@ class DownloadProgress:
             return f"{self.speed / (1024 * 1024):.1f} MB/s"
 
 
-# Type alias for progress callback
 ProgressCallback = Callable[[DownloadProgress], None]
 
 
 @dataclass
 class DownloadOptions:
     """Options for a download operation."""
-    output_dir: Path = field(default_factory=lambda: Path.home() / "Downloads" / "Snag")
+    output_dir: Path = field(default_factory=lambda: Path.home() / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "Snag")
     filename_template: str = "%(title)s.%(ext)s"
     prefer_mp4: bool = True
     max_quality: bool = True  # Always highest quality
@@ -148,9 +147,6 @@ class DownloadEngine(ABC):
 
         Args:
             url: The URL to check.
-
-        Returns:
-            True if this engine supports downloading from this URL.
         """
         ...
 
@@ -162,32 +158,27 @@ class DownloadEngine(ABC):
             url: The URL to extract info from.
 
         Returns:
-            MediaInfo with all available metadata.
+            MediaInfo object with metadata.
 
         Raises:
-            ExtractionError: If metadata extraction fails.
+            ExtractionError: If the URL cannot be processed.
         """
         ...
 
     @abstractmethod
     def download(self, url: str, options: Optional[DownloadOptions] = None) -> DownloadResult:
-        """Download media from the given URL.
+        """Download the media at the given URL.
 
         Args:
-            url: The URL to download from.
-            options: Download configuration. If None, uses defaults.
+            url: The URL to download.
+            options: Download options.
 
         Returns:
-            DownloadResult indicating success/failure and file paths.
+            DownloadResult with success/failure and file path.
         """
         ...
 
 
 class ExtractionError(Exception):
-    """Raised when metadata extraction fails."""
-    pass
-
-
-class DownloadError(Exception):
-    """Raised when a download operation fails."""
+    """Raised when a URL cannot be extracted (invalid, unsupported, etc.)."""
     pass
