@@ -14,7 +14,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # Default download directory
-DEFAULT_DOWNLOAD_DIR = Path.home() / "Downloads" / "Snag"
+DEFAULT_DOWNLOAD_DIR = Path.home() / "Desktop" / "Snag"
 
 
 def ensure_download_dir(path: Path | None = None) -> Path:

@@ -13,7 +13,7 @@ def test_server():
     def run_server():
         subprocess.run([
             "python3", "src/main.py", "--server", "--host", "127.0.0.1", "--port", "8080"
-        ], cwd="/Users/carter/Desktop/code/claude/media downloader")
+        ], cwd="/Users/carter/Desktop/code/claude/The Vault/projects/Snag")
     
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()

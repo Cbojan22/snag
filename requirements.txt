@@ -1,5 +1,5 @@
 # ============================================================
-# Media Downloader — Python Dependencies
+# Snag — Python Dependencies
 # ============================================================
 
 # --- Core Download Engines ---

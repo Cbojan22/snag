@@ -1,9 +1,9 @@
 #!/bin/bash
 # ============================================================
-# Media Downloader — Project Init Script
+# Snag — Project Init Script
 # ============================================================
 # This script sets up the development environment for the
-# Media Downloader application. Run once to get started.
+# Snag application. Run once to get started.
 # Usage: chmod +x init.sh && ./init.sh
 # ============================================================
 
@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════════════════════╗"
-echo "║          Media Downloader — Project Setup            ║"
+echo "║                Snag — Project Setup                  ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 

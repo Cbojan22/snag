@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
-name = "media-downloader"
+name = "snag"
 version = "0.2.1"
 description = "Download videos and images from any online source at highest quality without watermarks"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 
 [project.scripts]
-media-downloader = "src.main:main"
+snag = "src.main:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

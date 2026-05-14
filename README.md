@@ -44,7 +44,7 @@ python -m src.main
 
 1. Paste or type a URL into the input bar
 2. Preview appears automatically (thumbnail, title, platform info)
-3. Click **Download** — file saves to `~/Downloads/Snag/`
+3. Click **Download** — file saves to `~/Desktop/Snag/`
 
 ## Configuration
 

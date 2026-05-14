@@ -1,4 +1,4 @@
-# CLAUDE.md — Media Downloader Application
+# CLAUDE.md — Snag
 
 ## Project Overview
 A local Python desktop application that downloads videos and images from any online source at the **highest available quality** without watermarks. This is a **personal-use tool** — not a web service or SaaS product.
@@ -16,7 +16,7 @@ A local Python desktop application that downloads videos and images from any onl
 
 ### Directory Structure
 ```
-media-downloader/
+Snag/
 ├── src/
 │   ├── main.py              # Entry point
 │   ├── app.py               # GUI application bootstrap
@@ -149,6 +149,6 @@ yt-dlp handles everything. For 4K+/8K, FFmpeg MUST be installed to merge separat
 - **Batch downloads:** Supported (multiple URLs, playlists, albums)
 - **Video output:** MP4 (H.264+AAC merge via FFmpeg)
 - **Image output:** Keep original format
-- **Download location:** `~/Downloads/MediaDownloader/`
+- **Download location:** `~/Desktop/Snag/`
 - **Theme:** Dark mode default, light mode toggle available
 - **Packaging:** PyInstaller for `.app` bundle

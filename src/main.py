@@ -59,7 +59,7 @@ def setup_logging() -> None:
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Snag — Media Downloader")
+    parser = argparse.ArgumentParser(description="Snag — download videos and images at highest quality")
     parser.add_argument(
         "--server",
         action="store_true",
