@@ -47,3 +47,6 @@ downloads/
 # Stray local artifacts
 *.dump
 wake_and_sync.sh
+
+# Claude Code project instructions — keep local, do not push
+CLAUDE.md
