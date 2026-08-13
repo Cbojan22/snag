@@ -33,11 +33,6 @@ from src.core.watermark import get_watermark_free_opts
 
 logger = logging.getLogger(__name__)
 
-# YouTube player clients that bypass the "Sign in to confirm you're not a bot"
-# challenge without needing cookies. The default `web` client is the most
-# aggressively challenged; `tv` (the TV embed client) and `web_safari` rarely
-# trigger it. `ios` is a backup that sometimes carries unique formats.
-_YOUTUBE_PLAYER_CLIENTS = ["tv", "web_safari", "ios"]
 _YOUTUBE_HOST_PARTS = ("youtube.com", "youtu.be", "youtube-nocookie.com")
 
 
@@ -234,15 +229,11 @@ class VideoDownloader(DownloadEngine):
         wm_opts = get_watermark_free_opts(url)
         ydl_opts.update(wm_opts)
 
-        # YouTube: switch to player clients that don't trigger bot challenges.
-        # Skip when the user supplied real cookies — the default `web` client
-        # works fine when authenticated and exposes the full format ladder.
-        if self._is_youtube_url(url) and not (
-            ydl_opts.get("cookiefile") or ydl_opts.get("cookiesfrombrowser")
-        ):
-            extractor_args = dict(ydl_opts.get("extractor_args") or {})
-            extractor_args["youtube"] = {"player_client": list(_YOUTUBE_PLAYER_CLIENTS)}
-            ydl_opts["extractor_args"] = extractor_args
+        # YouTube: do NOT override player_client. yt-dlp's default client
+        # rotation tracks YouTube's bot-detection/DRM/PO-token changes with
+        # every release; a hardcoded list goes stale within months (a pinned
+        # tv/web_safari/ios list caused "Requested format is not available"
+        # once YouTube DRM'd the tv client). Keeping yt-dlp current is the fix.
 
         return ydl_opts
 

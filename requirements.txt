@@ -3,7 +3,7 @@
 # ============================================================
 
 # --- Core Download Engines ---
-yt-dlp[default]>=2024.0.0       # Video downloader (YouTube, TikTok, 1000+ sites)
+yt-dlp[default]>=2026.7.4       # Video downloader — keep current! Stale versions break YouTube (bot checks, DRM'd clients)
 gallery-dl>=1.27.0              # Image/gallery downloader (Imgur, Reddit, 100+ sites)
 
 # --- Media Processing ---
