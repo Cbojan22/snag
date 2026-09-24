@@ -4,7 +4,7 @@ build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
 name = "snag"
-version = "0.2.1"
+version = "0.3.1"
 description = "Download videos and images from any online source at highest quality without watermarks"
 requires-python = ">=3.10"
 license = {text = "MIT"}

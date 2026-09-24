@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 
 import requests
 import yt_dlp
+from yt_dlp.cookies import YoutubeDLCookieJar
 
 from src.core.engine import (
     DownloadEngine,
@@ -34,6 +35,12 @@ from src.core.watermark import get_watermark_free_opts
 logger = logging.getLogger(__name__)
 
 _YOUTUBE_HOST_PARTS = ("youtube.com", "youtu.be", "youtube-nocookie.com")
+
+# Only cookies for these domains are written to the on-disk YouTube cookie
+# cache: YouTube domains plus their subdomains, and the Google domains that hold
+# the account login (exact match — not Gmail, Drive, Pay, etc.).
+_COOKIE_CACHE_DOMAINS = ("youtube.com", "youtube-nocookie.com")
+_COOKIE_CACHE_EXACT_DOMAINS = ("google.com", "accounts.google.com")
 
 
 class VideoDownloader(DownloadEngine):
@@ -100,13 +107,35 @@ class VideoDownloader(DownloadEngine):
         """
         return cls._cookies_cache_dir() / "youtube.txt"
 
+    @staticmethod
+    def _is_cacheable_cookie_domain(domain: str) -> bool:
+        """Return True if a cookie belongs to a domain YouTube auth needs."""
+        domain = domain.lstrip(".").lower()
+        if domain in _COOKIE_CACHE_EXACT_DOMAINS:
+            return True
+        return any(
+            domain == d or domain.endswith("." + d) for d in _COOKIE_CACHE_DOMAINS
+        )
+
     @classmethod
     def _save_cookies_to_cache(cls, ydl: "yt_dlp.YoutubeDL", path: Path) -> None:
-        """Persist a YoutubeDL session's cookiejar to a Netscape cookies.txt file."""
+        """Persist a session's YouTube/Google cookies to a Netscape cookies.txt file.
+
+        ``cookiesfrombrowser`` loads the browser's *entire* cookie store, so the
+        jar is filtered down to YouTube/Google domains before writing — the cache
+        must never hold session cookies for unrelated sites. The directory and
+        file are restricted to the current user.
+        """
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            ydl.cookiejar.save(str(path), ignore_discard=True, ignore_expires=True)
-            logger.info("Cached cookies to %s", path)
+            path.parent.chmod(0o700)
+            jar = YoutubeDLCookieJar(str(path))
+            for cookie in ydl.cookiejar:
+                if cls._is_cacheable_cookie_domain(cookie.domain):
+                    jar.set_cookie(cookie)
+            jar.save(ignore_discard=True, ignore_expires=True)
+            path.chmod(0o600)
+            logger.info("Cached %d YouTube cookies to %s", len(jar), path)
         except Exception as e:
             logger.warning("Failed to cache cookies to %s: %s", path, e)
 
